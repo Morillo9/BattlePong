@@ -129,8 +129,8 @@ class MyApplication(arcade.Window):
 
             item_choice = random.choice(['rocket', 'lightning'])
 
-            x = random.randint(0, self.player_sprite.center_x - self.player_sprite.width / 2)
-            y = random.randint(self.player_sprite.center_x + self.player_sprite.width / 2, SCREEN_WIDTH - 5 )
+            x = random.randint(0, self.player_sprite.center_x - self.player_sprite.width / 2 - 20)
+            y = random.randint(self.player_sprite.center_x + self.player_sprite.width / 2 + 20, SCREEN_WIDTH)
 
             item_dict = {
                 'rocket': self.rocketGen(random.choice([x, y]), 50),
