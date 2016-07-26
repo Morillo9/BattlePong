@@ -18,7 +18,7 @@ class MyApplication(arcade.Window):
     If you do need a method, delete the 'pass' and replace it
     with your own code. Don't leave 'pass' in this program.
     """
-            
+
 
     def __init__(self, width, height):
         super().__init__(width, height)
@@ -33,8 +33,8 @@ class MyApplication(arcade.Window):
         self.paddle_ball_dif = 0.0
         self.rocket_count = 0
         self.rocket_activate = False
-        
-        
+
+
         self.computer_score = 0
         self.player_score = 0
 
@@ -43,7 +43,7 @@ class MyApplication(arcade.Window):
         self.item_sprites_list = None
         self.player_sprite = None
         self.computer_sprite = None
-        
+
         arcade.set_background_color(arcade.color.WHITE)
 
     def resetGame(self):
@@ -68,9 +68,6 @@ class MyApplication(arcade.Window):
         self.ball_sprite = arcade.Sprite("ball.png", SPRITE_SCALE)
         self.rocket = arcade.Sprite("onlyrocket.png", SPRITE_SCALE)
 
-        tmp = arcade.load_texture("enemy_short.png")
-        self.computer_sprite.append_texture(tmp)
-        
         self.player_sprite.center_y = 50
         self.player_sprite.center_x = SCREEN_WIDTH / 2
         self.computer_sprite.center_x = SCREEN_WIDTH / 2
@@ -81,10 +78,10 @@ class MyApplication(arcade.Window):
         self.all_sprites_list.append(self.player_sprite)
         self.all_sprites_list.append(self.computer_sprite)
         self.all_sprites_list.append(self.ball_sprite)
-        
+
         self.start_time = time.time()
         self.current_time = None
-    
+
     def rocketGen(self, x, y):
 
        rocket = arcade.Sprite("onlyrocket.png", SPRITE_SCALE)
@@ -92,7 +89,15 @@ class MyApplication(arcade.Window):
        rocket.center_y = y
        rocket.change_y = 5
 
-       return rocket  
+       return rocket
+
+    def lightningGen(self, x, y):
+
+        lightning = arcade.Sprite("lightning.png", SPRITE_SCALE)
+        lightning.center_x = x
+        lightning.center_y = y
+
+        return lightning
 
     def on_draw(self):
         """
@@ -122,16 +127,23 @@ class MyApplication(arcade.Window):
 
         if self.current_time > 10:
 
-            a = random.choice([0, 1])
-            if a == 0:
-                self.item_sprites_list.append(self.rocketGen(self.player_sprite.center_x / 2 , 50))
-            elif a == 1:
-                self.item_sprites_list.append(self.rocketGen(SCREEN_WIDTH - \
-                 self.player_sprite.center_x / 2 + self.player_sprite.center_x))
+            item_choice = random.choice(['rocket', 'lightning'])
 
+            x = random.randint(0, self.player_sprite.center_x - self.player_sprite.width / 2)
+            y = random.randint(self.player_sprite.center_x + self.player_sprite.width / 2, SCREEN_WIDTH - 5 )
+
+            item_dict = {
+                'rocket': self.rocketGen(random.choice([x, y]), 50),
+                'lightning': self.lightningGen(random.choice([x, y]), 50)
+            }
+            try:
+                self.item_sprites_list.append(item_dict[item_choice])
+            except Exception:
+                print('item generation failed')
+            
             self.current_time = 0
             self.start_time = time.time()
-        
+
         #computer logic
         if self.ball_sprite.center_x > self.computer_sprite.center_x and \
                 self.computer_sprite.center_x + self.computer_sprite.width / 2 < SCREEN_WIDTH:
@@ -196,6 +208,7 @@ class MyApplication(arcade.Window):
             self.rocketGen(self.player_sprite.center_x, self.player_sprite.center_y)
             self.rocket_activate = False
             self.rocket_sprites_list.append(self.rocketGen(self.player_sprite.center_x, self.player_sprite.center_y))
+            self.rocket_count -= 1
 
         self.all_sprites_list.update()
 
@@ -204,7 +217,7 @@ class MyApplication(arcade.Window):
         for rocket in self.rocket_sprites_list:
 
             rocket.center_y += rocket.change_y
-            
+
             if check_for_collision(rocket, self.computer_sprite):
                 tmp_x = self.computer_sprite.center_x
                 tmp_y = self.computer_sprite.center_y
@@ -225,7 +238,7 @@ class MyApplication(arcade.Window):
         elif key == arcade.key.RIGHT:
             self.last_key = 'RIGHT'
 
-        if key == arcade.key.SPACE:
+        if key == arcade.key.SPACE and self.rocket_count > 0:
             self.rocket_activate = True
 
     def on_key_release(self, key, key_modifiers):
