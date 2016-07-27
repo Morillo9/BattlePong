@@ -32,8 +32,16 @@ class MyApplication(arcade.Window):
         self.contact_counter = 0
         self.paddle_ball_dif = 0.0
         self.rocket_count = 0
+        self.invis_count = 0
+        self.lightning_count = 0
         self.rocket_activate = False
+        self.last_item = None
+        self.board_speed_player = 2
+        self.board_speed_computer = 2
 
+        self.invis_timer = 0
+        self.invis_activated = False
+        self.invis_count = 0
 
         self.computer_score = 0
         self.player_score = 0
@@ -77,7 +85,6 @@ class MyApplication(arcade.Window):
 
         self.all_sprites_list.append(self.player_sprite)
         self.all_sprites_list.append(self.computer_sprite)
-        self.all_sprites_list.append(self.ball_sprite)
 
         self.start_time = time.time()
         self.current_time = None
@@ -99,6 +106,14 @@ class MyApplication(arcade.Window):
 
         return lightning
 
+    def invisGen(self, x, y):
+
+        invis = arcade.Sprite("invis.jpg", SPRITE_SCALE)
+        invis.center_x = x
+        invis.center_y = y
+
+        return invis
+
     def on_draw(self):
         """
         Render the screen.
@@ -112,6 +127,8 @@ class MyApplication(arcade.Window):
         self.all_sprites_list.draw()
         self.rocket_sprites_list.draw()
         self.item_sprites_list.draw()
+        if self.invis_activated is False:
+            self.ball_sprite.draw()
 
         #draw Text
 
@@ -121,44 +138,55 @@ class MyApplication(arcade.Window):
 
     def animate(self, delta_time):
 
-        self.current_time = time.time() - self.start_time
+        #check timed events
+        self.item_time_diff = time.time() - self.start_time
+        self.invis_time_diff = time.time() - self.invis_timer
+
+        if self.invis_time_diff > 1:
+            self.invis_activated = False
+            self.invis_timer = 0
 
         #gen items
 
-        if self.current_time > 10:
+        if self.item_time_diff > 10:
 
-            item_choice = random.choice(['rocket', 'lightning'])
+            tmp_coordinates = (self.player_sprite.get_points())
 
-            x = random.randint(0, self.player_sprite.center_x - self.player_sprite.width / 2 - 20)
-            y = random.randint(self.player_sprite.center_x + self.player_sprite.width / 2 + 20, SCREEN_WIDTH)
+            item_choice = random.choice(['rocket', 'lightning', 'invis'])
+            self.last_item = item_choice
+
+            x = random.randint(0, self.player_sprite.center_x - self.player_sprite.width / 2 - 20) \
+                    if tmp_coordinates[0][0] >= 25 else tmp_coordinates[1][0] + random.randint(50, 2200)
+
+            y = random.randint(self.player_sprite.center_x + self.player_sprite.width / 2 + 20, SCREEN_WIDTH) \
+                    if tmp_coordinates[1][0] <= SCREEN_WIDTH - 25 else tmp_coordinates[0][0] - random.randint(50, 200)
 
             item_dict = {
                 'rocket': self.rocketGen(random.choice([x, y]), 50),
-                'lightning': self.lightningGen(random.choice([x, y]), 50)
+                'lightning': self.lightningGen(random.choice([x, y]), 50),
+                'invis': self.invisGen(random.choice([x, y]), 50)
             }
-            try:
-                self.item_sprites_list.append(item_dict[item_choice])
-            except Exception:
-                print('item generation failed')
-            
-            self.current_time = 0
+
+            self.item_sprites_list.append(item_dict[item_choice])
+
+            self.item_time_diff = 0
             self.start_time = time.time()
 
         #computer logic
         if self.ball_sprite.center_x > self.computer_sprite.center_x and \
                 self.computer_sprite.center_x + self.computer_sprite.width / 2 < SCREEN_WIDTH:
-            self.computer_sprite.center_x += 2
+            self.computer_sprite.center_x += self.board_speed_computer
 
         elif self.ball_sprite.center_x < self.computer_sprite.center_x and self.computer_sprite.center_x \
                 - self.computer_sprite.width / 2 > 0:
-            self.computer_sprite.center_x -= 2
+            self.computer_sprite.center_x -= self.board_speed_computer
 
         #move player
         if self.last_key == 'LEFT' and self.player_sprite.center_x - self.player_sprite.width / 2 > 0:
-            self.player_sprite.center_x -= 2
+            self.player_sprite.center_x -= self.board_speed_player
 
         elif self.last_key == 'RIGHT' and self.player_sprite.center_x + self.player_sprite.width / 2 <= SCREEN_WIDTH:
-            self.player_sprite.center_x += 2
+            self.player_sprite.center_x += self.board_speed_player
 
         self.ball_sprite.center_x += self.ball_velocity_x
         self.ball_sprite.center_y += self.ball_velocity_y
@@ -180,8 +208,13 @@ class MyApplication(arcade.Window):
 
         collision_list =  arcade.geometry.check_for_collision_with_list(self.player_sprite, self.item_sprites_list)
         for item in collision_list:
-               self.item_sprites_list.remove(item)
-               self.rocket_count += 1
+            self.item_sprites_list.remove(item)
+            if self.last_item == 'rocket':
+                self.rocket_count += 1
+            elif self.last_item == 'lightning':
+                self.lightning_count += 1
+            elif self.last_item == 'invis':
+                self.invis_count += 1
 
 
         #check screenborders
@@ -238,15 +271,14 @@ class MyApplication(arcade.Window):
         elif key == arcade.key.RIGHT:
             self.last_key = 'RIGHT'
 
-        if key == arcade.key.SPACE and self.rocket_count > 0:
-            self.rocket_activate = True
-
-    def on_key_release(self, key, key_modifiers):
-        """
-        Called whenever the user lets off a previously pressed key.
-        """
         if key == arcade.key.SPACE:
-            print("You stopped pressing the space bar.")
+            if  self.rocket_count > 0:
+                self.rocket_activate = True
+            elif self.invis_count > 0:
+                self.invis_activated = True
+                self.invis_timer = time.time()
+                self.invis_count -= 1
+
 
 window = MyApplication(SCREEN_WIDTH, SCREEN_HEIGHT)
 window.setup()
